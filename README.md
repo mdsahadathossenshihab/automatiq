@@ -1,30 +1,27 @@
-# Automatiq — Multi-page AI Automation Website
+# Automatiq — Production Fixed Build
 
-A premium multi-page static/Vite website for Automatiq.
+This package is the repaired multi-page GitHub Pages build.
 
-## Pages
-- `/index.html` — Home
-- `/services.html` — Services
-- `/automation.html` — Automation workflow
-- `/ai-support.html` — AI Support Center
-- `/social-automation.html` — Social automation
-- `/vibe-coding.html` — Vibe Coding & Web Apps
-- `/pricing.html` — Pricing
-- `/login.html` — Login / Signup
-- `/dashboard.html` — Client dashboard
+## Included
+- Home / hero automation experience
+- Full services catalog
+- Transparent pricing with Firebase order requests
+- Interactive automation workflow
+- Social automation demo
+- Vibe Coding demo
+- Firebase authentication: sign in, sign up, password reset
+- Firebase-backed dashboard and order list
+- Support assistant + Firebase support tickets
+- Responsive desktop/tablet/mobile layouts
+- Boot-loader fallback so content never remains hidden
+- Custom 404 page
+- Secure Firestore rules file
 
-## Run
-```bash
-npm install
-npm run dev
-```
-
-## Build
-```bash
-npm run build
-```
+## GitHub Pages
+Keep all files in the repository root. The site URL is: `https://mdsahadathossenshihab.github.io/automatiq/`
 
 ## Firebase
-`firebase-applet-config.json` contains the Firebase web configuration supplied with the original project. For production, review Firebase Authorized Domains and Firestore Security Rules before deployment.
+The existing Firebase project config is preserved in `firebase-config.js`. Deploy `firestore.rules` to the same Firebase project before using production order/ticket writes.
 
-The UI only shows Firebase Live when Firebase initializes successfully. It does not display a fake Demo Mode banner when Firebase is available.
+## Important
+Third-party Facebook/Instagram/WhatsApp connections are intentionally shown as setup-dependent until the required platform OAuth/API credentials and permissions are configured. The dashboard no longer falsely claims that those platforms are connected.
