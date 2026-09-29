@@ -1,8 +1,9 @@
-window.AUTOMATIQ_FIREBASE_CONFIG={
- apiKey:"AIzaSyAy7qeUz455MJmZJQQ5B05JY_d_XAeb0cA",
- authDomain:"gen-lang-client-0755341897.firebaseapp.com",
- projectId:"gen-lang-client-0755341897",
- storageBucket:"gen-lang-client-0755341897.firebasestorage.app",
- messagingSenderId:"234265265382",
- appId:"1:234265265382:web:e7c8cf7ed8a52e1648a727"
+window.AUTOMATIQ_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAvHATXb8QaiVzWiv6RzeXcgEeK7aST1TU",
+  authDomain: "automatiq-e9b5b.firebaseapp.com",
+  projectId: "automatiq-e9b5b",
+  storageBucket: "automatiq-e9b5b.firebasestorage.app",
+  messagingSenderId: "931030567705",
+  appId: "1:931030567705:web:9b5458d1541539d382d388",
+  measurementId: "G-60Z70Y2686"
 };

@@ -1,21 +1,17 @@
 # Automatiq — Production GitHub Pages Build
 
-## Important Firebase step
-The current project files contain the Firebase Web App configuration that was previously supplied. The live site is returning `auth/api-key-not-valid` during Firebase Authentication, which means the API key currently stored in `firebase-config.js` is not accepted by Firebase Authentication.
+## Firebase setup
+The production config in `firebase-config.js` now targets the current Automatiq Web App: `automatiq-e9b5b`.
 
-Firebase's documentation says the common causes are: a deleted key, a key from another project, or API/application restrictions that prevent the key from being used. The correct fix is to obtain the current config object for the **same Firebase Web App** and replace the `apiKey` value in `firebase-config.js` before deploying.
+Before deploying to GitHub Pages:
+1. Firebase Console → **Authentication → Sign-in method** → enable **Email/Password**.
+2. Authentication → **Settings → Authorized domains** → add `mdsahadathossenshihab.github.io`.
+3. Firebase Console → **Project settings → Your apps → Web app** → keep the Web SDK config synchronized with `firebase-config.js`.
+4. Publish the included `firestore.rules` in **Firestore Database → Rules**.
 
-### Get the correct Web config
-1. Open Firebase Console.
-2. Open project `gen-lang-client-0755341897`.
-3. Go to **Project settings → Your apps → Web app**.
-4. Open the SDK setup/configuration object.
-5. Copy the current `apiKey` into `firebase-config.js`.
-6. In **Authentication → Sign-in method**, make sure **Email/Password** is enabled.
-7. In **Authentication → Settings → Authorized domains**, make sure `mdsahadathossenshihab.github.io` is present.
-8. Deploy the files to GitHub Pages again.
+The website uses Firebase Compat SDK in the static GitHub Pages build. The supplied Web App configuration includes the API key, project ID, app ID and measurement ID; Analytics is not required for authentication, so the site does not initialize Analytics unless it is explicitly added later.
 
-Do not replace the Firebase API key with a Gemini/Generative Language API key. Firebase web apps use the Firebase Web App key.
+If Authentication still fails, use the exact Firebase error shown on the Login page. Common causes include Email/Password being disabled or the GitHub Pages domain not being authorized.
 
 ## What was fixed in this build
 - Full Services catalog with grouped service cards
@@ -43,3 +39,4 @@ Publish the included `firestore.rules` in Firebase Console before production use
 The project now uses the exact Firebase Web App configuration supplied for the Automatiq Firebase project, including the current Web App `appId`. The static GitHub Pages site uses Firebase Compat SDK because the pages load `firebase-app-compat.js`, `firebase-auth-compat.js`, and `firebase-firestore-compat.js`.
 
 After deployment, if Authentication still reports `auth/api-key-not-valid`, verify the API key is active in Firebase/Google Cloud and that its API restrictions allow the required Firebase APIs. Also enable Email/Password under Firebase Authentication → Sign-in method.
+

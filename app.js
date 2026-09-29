@@ -17,16 +17,44 @@ let firebaseLive=false,auth=null,db=null;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 function toast(msg,type='info'){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3800)}
 function setFirebaseStatus(label,ok=false){$$('[data-firebase-status]').forEach(x=>{x.innerHTML=`<span class=\"dot\"></span>${label}`;x.classList.toggle('bad',!ok)})}
-function firebaseAuthError(err){const code=err?.code||'';if(code.includes('api-key-not-valid')||code==='auth/api-key-not-valid')return 'Firebase API key is invalid. Open Firebase Console → Project settings → Your apps → Web app, copy the current Web SDK config API key into firebase-config.js, then redeploy GitHub Pages.';return authMessage(err)}
+function firebaseAuthError(err){
+  const code=String(err?.code||'').toLowerCase();
+  const raw=String(err?.message||'');
+  if(code.includes('api-key-not-valid') || code.includes('invalid-api-key') || raw.toLowerCase().includes('api key not valid')){
+    return 'Firebase rejected the Web API key. Verify that firebase-config.js exactly matches the registered Automatiq Web App (project automatiq-e9b5b), that Email/Password is enabled, and that the key is not deleted or restricted from Firebase Authentication.';
+  }
+  return authMessage(err);
+}
+
 function initFirebase(){
   try{
     const c=window.AUTOMATIQ_FIREBASE_CONFIG;
-    if(!c||!window.firebase||!c.apiKey||c.apiKey.includes('YOUR_')){setFirebaseStatus('Firebase setup required');return;}
-    if(!firebase.apps.length)firebase.initializeApp(c);
-    auth=firebase.auth();db=firebase.firestore();firebaseLive=true;setFirebaseStatus('Checking Firebase…',true);
-    auth.onAuthStateChanged(()=>setFirebaseStatus('Firebase Live',true),err=>{firebaseLive=false;setFirebaseStatus('Firebase Error');setAuthError(firebaseAuthError(err));});
-  }catch(e){firebaseLive=false;auth=null;db=null;setFirebaseStatus('Firebase Error');console.warn(e);}
+    if(!c||!window.firebase||!c.apiKey||c.apiKey.includes('YOUR_')){
+      firebaseLive=false; auth=null; db=null; setFirebaseStatus('Firebase setup required'); return;
+    }
+    const required=['apiKey','authDomain','projectId','appId'];
+    const missing=required.filter(k=>!c[k]);
+    if(missing.length){
+      firebaseLive=false; auth=null; db=null; setFirebaseStatus('Firebase config incomplete');
+      setAuthError('Firebase configuration is incomplete: '+missing.join(', ')+'.'); return;
+    }
+    if(!firebase.apps.length) firebase.initializeApp(c);
+    auth=firebase.auth();
+    db=firebase.firestore();
+    auth.useDeviceLanguage?.();
+    firebaseLive=true;
+    setFirebaseStatus('Firebase Live',true);
+    auth.onAuthStateChanged(
+      ()=>setFirebaseStatus('Firebase Live',true),
+      err=>{firebaseLive=false;setFirebaseStatus('Firebase Error');setAuthError(firebaseAuthError(err));}
+    );
+  }catch(e){
+    firebaseLive=false;auth=null;db=null;setFirebaseStatus('Firebase Error');
+    setAuthError(firebaseAuthError(e));
+    console.error('Firebase initialization failed:',e);
+  }
 }
+
 
 function nav(){const btn=$('#mobileToggle'),menu=$('#mobileMenu');if(btn&&menu)btn.onclick=()=>menu.classList.toggle('open');const path=location.pathname.split('/').pop()||'index.html';$$('[data-nav]').forEach(a=>a.classList.toggle('active',a.getAttribute('href')===path));updateAuthNav()}
 function updateAuthNav(){if(!auth)return;auth.onAuthStateChanged(user=>{$$('[data-login]').forEach(a=>{a.textContent=user?'Dashboard':'Sign In';a.href=user?'dashboard.html':'login.html'});$$('[data-user-name]').forEach(x=>x.textContent=user?.displayName||user?.email?.split('@')[0]||'Workspace')})}
@@ -37,7 +65,40 @@ function heroSignals(){if(!$('#coreScene'))return;const scene=$('#coreScene');fo
 function workflow(){const steps=$$('.flowstep'),title=$('#stageTitle'),desc=$('#stageDesc'),log=$('#stageLog');if(!steps.length)return;let i=0;const data=[['Customer','A new customer starts a conversation.','Inbound event received'],['Message','The platform receives the message.','Message normalized'],['AI Detection','Intent and useful fields are identified.','Intent classified'],['AI Response','A response path is selected.','Response drafted'],['Automation','The workflow triggers the next action.','Action executed'],['Lead','Qualified information is captured.','Lead record prepared'],['CRM','The lead reaches the connected system.','CRM handoff ready']];const run=()=>{steps.forEach(x=>x.classList.remove('active'));const s=steps[i];if(s)s.classList.add('active');if(title)title.textContent=data[i][0];if(desc)desc.textContent=data[i][1];if(log)log.textContent=data[i][2];i=(i+1)%data.length};run();if(!matchMedia('(prefers-reduced-motion:reduce)').matches)setInterval(run,1600)}
 function renderServices(){const host=$('#servicesGrid');if(!host)return;const groups=[['Social Automation',SERVICES.slice(0,7)],['AI & Business Systems',SERVICES.slice(7,10)],['Web & Product Development',SERVICES.slice(10)]];host.innerHTML=groups.map(([group,items])=>`<section class=\"service-group reveal\"><div class=\"sectionhead\"><span class=\"eyebrow\">${group}</span><h2>${group==='Social Automation'?'Turn conversations into repeatable actions.':group==='AI & Business Systems'?'Connect decisions, leads and business operations.':'Build the interface and product behind the workflow.'}</h2></div><div class=\"grid3\">${items.map(s=>`<article class=\"card hover service-card\"><div class=\"iconbox\"><i data-lucide=\"${s.icon}\"></i></div><div class=\"service-top\"><h3>${s.name}</h3>${s.price!==null?`<span class=\"service-price\">৳${s.price.toLocaleString('en-BD')}</span>`:'<span class=\"service-price custom\">Custom</span>'}</div><p>${s.desc}</p><div class=\"mini-flow\"><span>Trigger</span><b>→</b><span>Decision</span><b>→</b><span>Action</span></div><div class=\"service-actions\"><a class=\"btn secondary\" href=\"pricing.html?service=${encodeURIComponent(s.name)}\">${s.price!==null?'View package':'Request quote'} →</a><a class=\"btn ghost\" href=\"automation.html\">See flow</a></div></article>`).join('')}</div></section>`).join('');icons();motion();}
 
-function renderPricing(){const host=$('#pricingGrid');if(!host)return;host.innerHTML=SERVICES.filter(s=>s.price!==null).map((s,i)=>`<article class=\"card price hover reveal ${i===3?'featured':''}\">${i===3?'<span class=\"price-badge\">Popular bundle</span>':''}<div><div class=\"iconbox\"><i data-lucide=\"${s.icon}\"></i></div><div class=\"service-top\"><h3>${s.name}</h3><span class=\"service-price\">৳${s.price.toLocaleString('en-BD')}</span></div><p>${s.desc}</p><ul><li>Implementation planning</li><li>Workflow setup & testing</li><li>Handoff documentation</li><li>Client support path</li></ul></div><button class=\"btn ${i===3?'primary':'secondary'}\" data-order=\"${s.name}\">Request this service →</button></article>`).join('');icons();$$('[data-order]').forEach(b=>b.onclick=()=>openOrder(b.dataset.order));const wanted=new URLSearchParams(location.search).get('service');if(wanted){setTimeout(()=>{const btn=$$('[data-order]').find(x=>x.dataset.order===wanted);btn?.scrollIntoView({behavior:'smooth',block:'center'});btn?.focus()},150)}}
+function renderPricing(){
+  const host=$('#pricingGrid');
+  if(!host)return;
+  const fixed=SERVICES.filter(s=>s.price!==null);
+  const custom=SERVICES.filter(s=>s.price===null);
+  host.innerHTML=`
+    <div class="pricing-section-title reveal"><span class="eyebrow">Fixed packages</span><h2>Clear pricing. Clear scope.</h2><p>Choose a ready-to-start automation package, then submit the implementation request from your workspace.</p></div>
+    <div class="pricegrid fixed-prices">${fixed.map((s,i)=>`
+      <article class="card price hover reveal ${i===3?'featured':''}">
+        ${i===3?'<span class="price-badge">Popular bundle</span>':''}
+        <div class="price-content">
+          <div class="iconbox"><i data-lucide="${s.icon}"></i></div>
+          <div class="service-top"><h3>${s.name}</h3><span class="service-price">৳${s.price.toLocaleString('en-BD')}</span></div>
+          <p>${s.desc}</p>
+          <ul><li>Implementation planning</li><li>Workflow setup & testing</li><li>Handoff documentation</li><li>Client support path</li></ul>
+        </div>
+        <button class="btn ${i===3?'primary':'secondary'}" data-order="${escapeHtml(s.name)}">Request this service →</button>
+      </article>`).join('')}</div>
+    <div class="pricing-section-title custom-pricing-title reveal"><span class="eyebrow">Custom solutions</span><h2>Need a system built around your business?</h2><p>These projects are scoped after understanding your workflow, integrations and delivery requirements.</p></div>
+    <div class="grid3 custom-prices">${custom.map(s=>`
+      <article class="card hover service-card reveal">
+        <div class="iconbox"><i data-lucide="${s.icon}"></i></div>
+        <div class="service-top"><h3>${s.name}</h3><span class="service-price custom">Custom</span></div>
+        <p>${s.desc}</p>
+        <div class="mini-flow"><span>Scope</span><b>→</b><span>Build</span><b>→</b><span>Launch</span></div>
+        <div class="service-actions"><a class="btn secondary" href="ai-support.html#ticket" data-custom-service="${escapeHtml(s.name)}">Request quote →</a><a class="btn ghost" href="services.html">Details</a></div>
+      </article>`).join('')}</div>`;
+  icons();
+  motion();
+  $$('[data-order]').forEach(b=>b.onclick=()=>openOrder(b.dataset.order));
+  const wanted=new URLSearchParams(location.search).get('service');
+  if(wanted){setTimeout(()=>{const btn=$$('[data-order]').find(x=>x.dataset.order===wanted);const customCard=$$('[data-custom-service]').find(x=>x.dataset.customService===wanted);(btn||customCard)?.scrollIntoView({behavior:'smooth',block:'center'});(btn||customCard)?.focus()},180)}
+}
+
 
 function openOrder(service){if(!firebaseLive||!auth){location.href=`login.html?return=pricing.html&service=${encodeURIComponent(service)}`;return}if(auth.currentUser){$('#orderService').value=service;$('#orderModal').classList.add('open');return}const stop=auth.onAuthStateChanged(u=>{stop();if(!u){location.href=`login.html?return=pricing.html&service=${encodeURIComponent(service)}`;return}$('#orderService').value=service;$('#orderModal').classList.add('open')},err=>{stop();setAuthError(firebaseAuthError(err))})}
 async function submitOrder(e){e.preventDefault();const f=e.currentTarget;const service=$('#orderService').value;const business=$('#orderBusiness').value.trim();const req=$('#orderRequirements').value.trim();if(!business||!req)return;if(!firebaseLive||!auth?.currentUser){toast('Please sign in before submitting an order.','error');return}try{await db.collection('orders').add({userId:auth.currentUser.uid,serviceName:service,businessName:business,requirements:req,status:'pending',createdAt:firebase.firestore.FieldValue.serverTimestamp()});$('#orderModal').classList.remove('open');f.reset();toast('Service request submitted. You can track it from your dashboard.','success')}catch(err){toast('Could not submit the request. Check your Firebase/Firestore setup.','error');console.error(err)}}
@@ -49,17 +110,60 @@ function authPage(){
    if(lf)lf.style.display=signup?'none':'block';if(sf)sf.style.display=signup?'block':'none';
    if($('#authTitle'))$('#authTitle').textContent=signup?'Create your workspace':'Welcome back';
    if($('#authSub'))$('#authSub').textContent=signup?'Set up your Automatiq client account.':'Sign in to your Automatiq client workspace.';
+   $('#authError')?.classList.remove('visible');
  };
  $('#loginTab')?.addEventListener('click',()=>show(false));$('#signupTab')?.addEventListener('click',()=>show(true));
- if(!firebaseLive){setAuthError('Firebase is not ready. Check the Firebase Web API key in firebase-config.js.');return;}
- auth.onAuthStateChanged(u=>{if(u&&location.pathname.endsWith('login.html')&&!new URLSearchParams(location.search).get('force'))location.href='dashboard.html';},err=>{firebaseLive=false;setAuthError(firebaseAuthError(err));});
- lf?.addEventListener('submit',async e=>{e.preventDefault();if(!firebaseLive||!auth)return setAuthError('Firebase authentication is unavailable. Please fix the Firebase configuration first.');try{await auth.signInWithEmailAndPassword($('#email').value.trim(),$('#password').value);location.href=new URLSearchParams(location.search).get('return')||'dashboard.html'}catch(err){setAuthError(firebaseAuthError(err))}});
- sf?.addEventListener('submit',async e=>{e.preventDefault();if(!firebaseLive||!auth)return setAuthError('Firebase authentication is unavailable. Please fix the Firebase configuration first.');const name=$('#signupName').value.trim(),email=$('#signupEmail').value.trim(),pass=$('#signupPassword').value;if(pass.length<6)return setAuthError('Password must contain at least 6 characters.');try{const c=await auth.createUserWithEmailAndPassword(email,pass);await c.user.updateProfile({displayName:name});await db.collection('users').doc(c.user.uid).set({uid:c.user.uid,name,email,createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});location.href='dashboard.html'}catch(err){setAuthError(firebaseAuthError(err))}});
- $('#resetPassword')?.addEventListener('click',async()=>{const email=$('#email').value.trim();if(!email)return setAuthError('Enter your email first.');if(!firebaseLive||!auth)return setAuthError('Firebase authentication is unavailable.');try{await auth.sendPasswordResetEmail(email);toast('Password reset email sent. Check your inbox.','success')}catch(err){setAuthError(firebaseAuthError(err))}});
+ if(!firebaseLive){setAuthError('Firebase Authentication is unavailable. Check firebase-config.js, enable Email/Password sign-in in Firebase, and add your GitHub Pages domain to Authorized domains.');return;}
+ auth.onAuthStateChanged(u=>{
+   if(u&&location.pathname.endsWith('login.html')&&!new URLSearchParams(location.search).get('force'))location.href=new URLSearchParams(location.search).get('return')||'dashboard.html';
+ },err=>{firebaseLive=false;setAuthError(firebaseAuthError(err));});
+ lf?.addEventListener('submit',async e=>{
+   e.preventDefault();
+   if(!firebaseLive||!auth)return setAuthError('Firebase Authentication is unavailable. Check the Firebase project configuration and make sure Email/Password sign-in is enabled.');
+   const email=$('#email').value.trim(),password=$('#password').value;
+   if(!email||!password)return setAuthError('Enter your email and password.');
+   const btn=lf.querySelector('button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Signing in…'}
+   try{
+     await auth.signInWithEmailAndPassword(email,password);
+     const ret=new URLSearchParams(location.search).get('return');
+     const safe=['pricing.html','dashboard.html','index.html','services.html','automation.html','ai-support.html','social-automation.html','vibe-coding.html'];
+     location.href=(ret&&safe.includes(ret))?ret:'dashboard.html';
+   }catch(err){setAuthError(firebaseAuthError(err))}
+   finally{if(btn){btn.disabled=false;btn.textContent='Sign In →'}}
+ });
+ sf?.addEventListener('submit',async e=>{
+   e.preventDefault();
+   if(!firebaseLive||!auth)return setAuthError('Firebase Authentication is unavailable. Check the Firebase project configuration and make sure Email/Password sign-in is enabled.');
+   const name=$('#signupName').value.trim(),email=$('#signupEmail').value.trim(),pass=$('#signupPassword').value;
+   if(name.length<2)return setAuthError('Please enter your name.');
+   if(!email)return setAuthError('Please enter your email address.');
+   if(pass.length<6)return setAuthError('Password must contain at least 6 characters.');
+   const btn=sf.querySelector('button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Creating account…'}
+   try{
+     const c=await auth.createUserWithEmailAndPassword(email,pass);
+     try{await c.user.updateProfile({displayName:name});}catch(profileErr){console.warn('Firebase displayName update failed:',profileErr)}
+     try{
+       if(db)await db.collection('users').doc(c.user.uid).set({uid:c.user.uid,name,email,createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+     }catch(profileDocErr){
+       // Authentication has already succeeded. Do not tell the user that signup failed just because Firestore profile sync failed.
+       console.warn('Firestore profile sync failed:',profileDocErr);
+       toast('Account created. Your workspace profile will sync when Firestore access is available.','info');
+     }
+     const ret=new URLSearchParams(location.search).get('return');
+     location.href=ret||'dashboard.html';
+   }catch(err){setAuthError(firebaseAuthError(err))}
+   finally{if(btn){btn.disabled=false;btn.textContent='Create Account →'}}
+ });
+ $('#resetPassword')?.addEventListener('click',async()=>{
+   const email=$('#email').value.trim();
+   if(!email)return setAuthError('Enter your email first.');
+   if(!firebaseLive||!auth)return setAuthError('Firebase Authentication is unavailable.');
+   try{await auth.sendPasswordResetEmail(email);toast('Password reset email sent. Check your inbox.','success')}catch(err){setAuthError(firebaseAuthError(err))}
+ });
  show(new URLSearchParams(location.search).get('mode')==='signup');
 }
 
-function authMessage(e){const m={'auth/invalid-credential':'Email or password is incorrect.','auth/user-not-found':'No account was found with this email.','auth/wrong-password':'Email or password is incorrect.','auth/email-already-in-use':'An account already exists with this email.','auth/weak-password':'Use a stronger password.','auth/invalid-email':'Please enter a valid email address.','auth/operation-not-allowed':'Email/password sign-in is disabled in Firebase Authentication.','auth/network-request-failed':'Network error. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Wait a moment and try again.'};return m[e?.code]||e?.message||'Authentication failed.'}function setAuthError(m){const x=$('#authError');if(x){x.textContent=m;x.classList.add('visible')}else toast(m,'error')}
+function authMessage(e){const m={'auth/invalid-credential':'Email or password is incorrect.','auth/user-not-found':'No account was found with this email.','auth/wrong-password':'Email or password is incorrect.','auth/email-already-in-use':'An account already exists with this email. Try signing in instead.','auth/weak-password':'Use a stronger password.','auth/invalid-email':'Please enter a valid email address.','auth/operation-not-allowed':'Email/password sign-in is disabled. In Firebase Console open Authentication → Sign-in method and enable Email/Password.','auth/network-request-failed':'Network error. Check your connection and try again.','auth/too-many-requests':'Too many attempts. Wait a moment and try again.','auth/unauthorized-domain':'This GitHub Pages domain is not authorized in Firebase Authentication. Add mdsahadathossenshihab.github.io under Authentication → Settings → Authorized domains.','auth/internal-error':'Firebase returned an internal error. Check the project configuration and try again.'};return m[e?.code]||e?.message||'Authentication failed.'}function setAuthError(m){const x=$('#authError');if(x){x.textContent=m;x.classList.add('visible')}else toast(m,'error')}
 async function dashboard(){if(!$('#dashboardApp')||!auth)return;auth.onAuthStateChanged(async user=>{if(!user){location.href='login.html?return=dashboard.html';return}$('#dashName').textContent=user.displayName||user.email.split('@')[0];$('#dashEmail').textContent=user.email;try{const snap=await db.collection('orders').where('userId','==',user.uid).limit(50).get();const orders=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{const ta=a.createdAt?.toMillis?a.createdAt.toMillis():0;const tb=b.createdAt?.toMillis?b.createdAt.toMillis():0;return tb-ta}).slice(0,20);renderOrders(orders);$('#orderCount').textContent=orders.filter(o=>o.status!=='completed').length.toString().padStart(2,'0');$('#serviceCount').textContent=new Set(orders.map(o=>o.serviceName)).size.toString().padStart(2,'0')}catch(e){renderOrders([]);toast('Orders could not be loaded. Check Firestore rules/indexes.','error')}} ,err=>{firebaseLive=false;toast(firebaseAuthError(err),'error')});$('#logout')?.addEventListener('click',async()=>{await auth.signOut();location.href='index.html'});$('#requestConnection')?.addEventListener('click',()=>toast('Connection requests should be submitted with the platform, page/account and required permission details.','info'))}
 function renderOrders(orders){const host=$('#ordersBody');if(!host)return;if(!orders.length){host.innerHTML='<tr><td colspan="4">No service requests yet. Start from the Pricing page.</td></tr>';return}host.innerHTML=orders.map(o=>`<tr><td>${escapeHtml(o.serviceName||'Service')}</td><td>${escapeHtml(o.businessName||'—')}</td><td><span class="pill ${o.status==='completed'?'good':o.status==='pending'?'warn':'neutral'}">${escapeHtml(o.status||'pending')}</span></td><td>${o.createdAt?.toDate?o.createdAt.toDate().toLocaleDateString(): 'Recently'}</td></tr>`).join('')}
 function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
