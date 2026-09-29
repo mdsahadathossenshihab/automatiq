@@ -4,5 +4,5 @@ window.AUTOMATIQ_FIREBASE_CONFIG={
  projectId:"gen-lang-client-0755341897",
  storageBucket:"gen-lang-client-0755341897.firebasestorage.app",
  messagingSenderId:"234265265382",
- appId:"1:234265265382:web:68365c560874bf4948a727"
+ appId:"1:234265265382:web:e7c8cf7ed8a52e1648a727"
 };
